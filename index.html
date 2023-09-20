@@ -4,11 +4,15 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-		<title>reveal.js</title>
+		<title>Caching and Revalidating Data in NextJS</title>
 
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Inclusive+Sans&display=swap" rel="stylesheet">
 		<link rel="stylesheet" href="dist/reset.css">
 		<link rel="stylesheet" href="dist/reveal.css">
 		<link rel="stylesheet" href="dist/theme/black.css">
+		<link href="/static/next.js.svg" rel="shortcut icon" />
 
 		<!-- Theme used for syntax highlighted code -->
 		<link rel="stylesheet" href="plugin/highlight/monokai.css">
@@ -16,8 +20,148 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+				<section>
+					<img data-src="/static/next.js.svg" style="height: 400px;">
+					<h4>Caching and Revalidating Data</h4>
+					<h4>in Next.js</h4>
+				</section>
+
+				<section>
+					<section>
+						<h4>Caching Data</h4>
+					</section>
+
+					<section>
+						<p>Sounds cool, but what is it?</p>
+					</section>
+					
+					<section>
+						<p style="text-align: start; font-size: 20px;">Caching stores data so it doesn't need to be re-fetched from your data source on every request.</p>
+						<p style="text-align: start; font-size: 20px;">By default, Next.js automatically caches the returned values of <span style="color:aqua;">fetch</span> in the <a href="https://nextjs.org/docs/app/building-your-application/caching#data-cache">Data Cache</a> on the server.</p>
+						<p style="text-align: start; font-size: 20px;">With other words, the data can be fetched at build time or request time, cached, and reused on each data request.</p>
+					</section>
+
+					<section>
+						<p>Hmmm.. what is the Data Cache <br/>on the server?</p>
+					</section>
+
+					<section>
+						<p style="text-align: start; font-size: 20px;">Next.js has a built-in <span style="color:aqua;">Data Cache</span> that <span style="color:aqua;">persists</span> the results of data fetches across incoming server <span style="color:aqua;">requests</span> and <span style="color:aqua;">deployments</span>.</p>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">By default, data requests that use <span style="color:aqua;">fetch</span> are <span style="color:aqua;">cached</span>.</p>
+					</section>
+
+					<section>
+						<p>Again, sounds really cool.. <br/>but how does it work?</p>
+					</section>
+
+					<section>
+						<img data-src="/static/data-cache.avif" style="height: 300px;">
+						<p style="text-align: start; font-size: 20px;">- The first time a <span style="color: aqua">fetch</span> request is called during rendering, Next.js checks the Data Cache for a cached response.</p>
+						<p style="text-align: start; font-size: 20px;">- If a cached response is found, it's returned immediately and <span style="color: aqua;">memoized</span>.</p>
+						<p style="text-align: start; font-size: 20px;">- If a cached response is not found, the request is made to the data source, the result is stored in the Data Cache, and memoized.</p>
+						<p style="text-align: start; font-size: 20px;">- For uncached data (e.g. <span style="color: aqua;">{ cache: 'no-store' }</span>), the result is always fetched from the data source, and memoized.</p>
+						<p style="text-align: start; font-size: 20px;">- Whether the data is cached or uncached, the requests are always memoized to avoid making duplicate requests for the same data during a React render pass.</p>
+					</section>
+
+					<section>
+						<p>Hmm.. ok.. <br/>but for how long is the data cached?</p>
+					</section>
+
+					<section>
+						<p style="text-align: start; font-size: 20px;">The Data Cache is persistent across incoming requests and deployments unless you revalidate or opt-out.</p>
+					</section>
+				</section>
+
+				<section>
+					<section>
+						<h4>Revalidating Data</h4>
+					</section>
+
+					<section>
+						<p>What is revalidation?</p>
+					</section>
+
+					<section>
+						<p style="text-align: start; font-size: 20px;">Revalidation is the process of purging the Data Cache and re-fetching the latest data.</p>
+						<p style="text-align: start; font-size: 20px;">This is useful when your data changes and you want to ensure you show the latest information.</p>
+					</section>
+
+					<section>
+						<p>Hmm.. ok.. <br/> so how do we do it?</p>
+					</section>
+
+					<section>
+						<p style="text-align: start; font-size: 20px;">Cached data can be revalidated in two ways:</p>
+						<p style="text-align: start; font-size: 20px;">- <span style="color: aqua;">Time-based revalidation</span>: automatically revalidate data after a certain amount of time has passed. This is useful for data that changes infrequently and freshness is not as critical.</p>
+						<p style="text-align: start; font-size: 20px;">- <span style="color: aqua;">On-demand revalidation</span>: manually revalidate data based on an event (e.g. form submission). On-demand revalidation can use tag-based or path-based approach to revalidate groups of data at once.</p>
+					</section>
+
+					<section>
+						<p>Time-based revalidation</p>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">To revalidate data at a timed interval, we can use the <span style="color: aqua;">next.revalidate</span> option of <span style="color: aqua;">fetch</span> to set the cache lifetime of a resource (in seconds).</p>
+						<pre><code data-trim data-noescape>fetch('https://...', { next: { revalidate: 3600 } })</code></pre>
+					</section>
+
+					<section>
+						<p>On-demand Revalidation</p>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">Data can be revalidated on-demand by path (<span style="color: aqua;">revalidatePath</span>) or by cache tag (<span style="color: aqua;">revalidateTag</span>).</p>
+						<p style="text-align: start; font-size: 20px;">-<span style="color: aqua;">revalidatePath</span> allows you to purge cached data on-demand for a specific path.</p>
+						<p style="text-align: start; font-size: 20px;">-<span style="color: aqua;">revalidateTag</span> allows you to purge cached data on-demand for a specific cache tag.</p>
+					</section>
+
+					<section>
+						<p>Examples for <span style="color: aqua;">revalidatePath</span></p>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">Revalidating a Page Path - this will revalidate one specific URL on the next page visit.</p>
+						<pre><code data-trim data-noescape>
+							import { revalidatePath } from 'next/cache'
+							revalidatePath('/blog/post-1')
+						</code></pre>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">Revalidating a Layout Path - this will revalidate any URL that matches the provided page file on the next page visit.</p>
+						<pre><code data-trim data-noescape>
+							import { revalidatePath } from 'next/cache'
+							revalidatePath('/blog/[slug]', 'layout')
+							// or with route groups
+							revalidatePath('/(main)/post/[slug]', 'layout')
+						</code></pre>
+					</section>
+
+					<section>
+						<p>Examples for <span style="color: aqua;">revalidateTag</span></p>
+						<br/>
+						<p style="text-align: start; font-size: 20px;">Server Action</p>
+						<pre><code data-trim data-noescape>
+							import { revalidateTag } from 'next/cache'
+ 
+							export default async function submit() {
+							  await addPost()
+							  revalidateTag('posts')
+							}
+						</code></pre>
+						<p style="text-align: start; font-size: 20px;">Route Handler</p>
+						<pre><code data-trim data-noescape>
+							import { NextRequest, NextResponse } from 'next/server'
+							import { revalidateTag } from 'next/cache'
+ 
+							export async function GET(request: NextRequest) {
+							  const tag = request.nextUrl.searchParams.get('tag')
+							  revalidateTag(tag)
+							  return NextResponse.json({ ...... })
+							}
+						</code></pre>
+					</section>
+
+				</section>
+
+				<section>
+					<h4>Aaand that's all folks.</h4>
+					<p>Thank you for listening.</p>
+					<img data-src="/static/banana.png" style="height: 400px;">
+				</section>
 			</div>
 		</div>
 
